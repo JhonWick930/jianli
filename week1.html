@@ -2,8 +2,18 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>监理备考 · 第1周 在线测验（含错题库）</title>
+
+<!-- ===== PWA ===== -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3370ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="监理刷题">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <style>
 :root{
   --bg:#f5f6f8; --card:#fff; --ink:#1f2329; --sub:#646a73; --line:#e4e6eb;
@@ -92,6 +102,16 @@ header .meta{font-size:13px;opacity:.9;line-height:1.8}
 .exp .hl{color:var(--brand);font-weight:600}
 .exp code{background:#eef0f3;padding:1px 5px;border-radius:4px;font-size:13px;font-family:SFMono-Regular,Consolas,monospace}
 
+/* 云端同步栏 */
+.syncbar{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  background:#fff;border:1px solid var(--line);border-radius:9px;
+  padding:9px 13px;margin-bottom:14px;font-size:13px;
+}
+.syncstate{flex:1;color:var(--sub);min-width:110px}
+.syncstate.ok{color:var(--ok);font-weight:500}
+.syncstate.err{color:var(--no);font-weight:500}
+
 /* 错题库 */
 .wrongbox{display:none}
 .wrongbox.show{display:block}
@@ -159,6 +179,20 @@ footer .wrap{display:flex;gap:10px;align-items:center}
   font-size:13.5px;opacity:0;pointer-events:none;transition:.25s;z-index:200;white-space:nowrap;
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* 添加到主屏幕 提示条 */
+.installbar{
+  position:fixed;left:50%;bottom:calc(12px + env(safe-area-inset-bottom));
+  transform:translateX(-50%);width:calc(100% - 24px);max-width:520px;
+  background:#fff;border:1px solid var(--line);border-radius:14px;
+  box-shadow:0 8px 28px rgba(31,35,41,.16);padding:12px 14px;z-index:190;
+  display:flex;align-items:center;gap:11px;
+}
+.installbar img{width:40px;height:40px;border-radius:9px;flex:0 0 auto}
+.installbar .txt{flex:1;min-width:0;line-height:1.35}
+.installbar .txt b{display:block;font-size:14px}
+.installbar .txt span{font-size:12px;color:var(--sub)}
+.installbar .mini.ghost{background:#f2f3f5;color:var(--sub);padding:7px 10px}
 </style>
 </head>
 <body>
@@ -183,8 +217,25 @@ footer .wrap{display:flex;gap:10px;align-items:center}
     <button class="tab" data-v="wrong">错题库<span class="bubble" id="wcnt">0</span></button>
   </div>
 
+  <div class="syncbar" id="syncbar" style="display:none">
+    <span class="syncstate" id="syncState">未连接云端</span>
+    <button class="mini" id="btnSync">立即同步</button>
+    <button class="mini" id="btnSetup">连接云端</button>
+  </div>
+
   <div id="app" class="quizbox"></div>
   <div id="wapp" class="wrongbox"></div>
+</div>
+
+<!-- 添加到主屏幕 提示条（仅在未安装且浏览器支持时出现） -->
+<div class="installbar" id="installbar" style="display:none">
+  <img src="icons/icon-96.png" alt="">
+  <div class="txt">
+    <b>装到手机桌面</b>
+    <span>像 App 一样打开，做题更快</span>
+  </div>
+  <button class="mini" id="btnInstall">添加</button>
+  <button class="mini ghost" id="btnInstallClose">×</button>
 </div>
 
 <footer>
@@ -193,7 +244,7 @@ footer .wrap{display:flex;gap:10px;align-items:center}
     <button class="btn primary" id="submit" disabled>提交全部答案</button>
   </div>
   <div class="wrap" id="footWrong" style="display:none">
-    <button class="btn ghost" id="export">导出错题库</button>
+    <button class="btn ghost" id="export">导出文件</button>
     <button class="btn ghost" id="clearWrong">清空错题库</button>
   </div>
 </footer>
@@ -262,6 +313,17 @@ const WEEK_ID = "w1";
 const STORE = "jl_wrongbook_" + WEEK_ID;   // 本周错题库（各自独立）
 const ALL_STORE = "jl_wrongbook_all";      // 跨周总错题库
 const DONE_STORE = "jl_done_" + WEEK_ID;   // 本周完成记录
+
+/* ===== 云端同步配置（GitHub Gist） =====
+   把错题自动同步到云端，手机/电脑共享一份，助手可随时读取分析。
+   首次使用：点「连接云端」按提示填一次 Gist 地址和令牌，之后全自动。 */
+const CLOUD_STORE = "jl_cloud_cfg";        // 云端配置本地缓存
+const CLOUD_FILE  = "jl-wrongbook.json";   // 云端文件名
+
+function cloudCfg(){
+  try{ return JSON.parse(localStorage.getItem(CLOUD_STORE)) || null; }catch(e){ return null; }
+}
+function setCloudCfg(o){ localStorage.setItem(CLOUD_STORE, JSON.stringify(o)); }
 
 /* ============ 状态 ============ */
 const app = document.getElementById('app');
@@ -433,6 +495,147 @@ function grade(){
     });
     localStorage.setItem(ALL_STORE, JSON.stringify(all));
   }catch(e){}
+
+  // 自动同步云端（若已配置，静默执行，不打断做题）
+  autoSync();
+}
+
+/* ============ 云端同步（GitHub Gist） ============ */
+
+/* 拉取云端已有错题 */
+async function cloudPull(cfg){
+  const r = await fetch(`https://api.github.com/gists/${cfg.gistId}`, {
+    headers: cfg.token ? {'Authorization':'Bearer '+cfg.token, 'Accept':'application/vnd.github+json'} : {'Accept':'application/vnd.github+json'}
+  });
+  if(!r.ok) throw new Error('拉取失败 HTTP '+r.status);
+  const d = await r.json();
+  const f = d.files && d.files[CLOUD_FILE];
+  if(!f) return [];
+  const txt = f.truncated ? await (await fetch(f.raw_url)).text() : f.content;
+  try{ return JSON.parse(txt).wrong || []; }catch(e){ return []; }
+}
+
+/* 写入云端：合并本周错题到总表 */
+async function cloudPush(cfg, localAll){
+  // 先拉云端，做合并去重
+  let remote = [];
+  try{ remote = await cloudPull(cfg); }catch(e){ remote = []; }
+
+  const key = it => it.week + '||' + it.q;
+  const map = new Map();
+  remote.forEach(it=>map.set(key(it), it));
+  localAll.forEach(it=>{
+    const k = key(it), old = map.get(k);
+    if(old){
+      old.times = Math.max(old.times||1, it.times||1);
+      old.your  = it.your;
+      old.last  = it.last;
+    }else{
+      map.set(k, it);
+    }
+  });
+
+  const payload = {
+    updated: new Date().toISOString(),
+    total: map.size,
+    wrong: [...map.values()].sort((a,b)=>(b.times||1)-(a.times||1))
+  };
+
+  const body = {
+    description: '监理备考错题库（自动同步）',
+    public: false,
+    files: { [CLOUD_FILE]: { content: JSON.stringify(payload, null, 1) } }
+  };
+
+  const r = await fetch(`https://api.github.com/gists/${cfg.gistId}`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': 'Bearer ' + cfg.token,
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+  if(!r.ok) throw new Error('上传失败 HTTP '+r.status);
+  return payload;
+}
+
+/* 自动同步：配置好就静默跑 */
+async function autoSync(){
+  const cfg = cloudCfg();
+  if(!cfg || !cfg.gistId || !cfg.token) return;
+  try{
+    const allRaw = localStorage.getItem(ALL_STORE);
+    const all = allRaw ? JSON.parse(allRaw) : [];
+    await cloudPush(cfg, all);
+    setSyncState('已同步云端', 'ok');
+  }catch(e){
+    setSyncState('同步失败（可稍后重试）', 'err');
+  }
+}
+
+function setSyncState(text, kind){
+  const el = document.getElementById('syncState');
+  if(!el) return;
+  el.textContent = text;
+  el.className = 'syncstate' + (kind ? ' '+kind : '');
+}
+
+/* 手动同步 */
+async function manualSync(){
+  const cfg = cloudCfg();
+  if(!cfg || !cfg.gistId || !cfg.token){
+    openCloudSetup();
+    return;
+  }
+  setSyncState('同步中…', '');
+  try{
+    const all = JSON.parse(localStorage.getItem(ALL_STORE) || '[]');
+    const p = await cloudPush(cfg, all);
+    setSyncState(`已同步（云端共 ${p.total} 道）`, 'ok');
+    toast('同步成功，云端已保存 ' + p.total + ' 道错题');
+  }catch(e){
+    setSyncState('同步失败：' + e.message, 'err');
+    toast('同步失败，请检查配置');
+  }
+}
+
+/* 云端配置弹窗 */
+function openCloudSetup(){
+  const cfg = cloudCfg() || {};
+  const id = prompt(
+    '【第 1 步】粘贴你的 Gist 地址或 ID\n\n' +
+    '还没有？先按下面做：\n' +
+    '1. 打开 gist.github.com\n' +
+    '2. 文件名填：jl-wrongbook.json\n' +
+    '3. 内容随便填 {} \n' +
+    '4. 点 Create secret gist\n' +
+    '5. 复制地址栏里的那串 ID（如 a1b2c3d4...）\n\n' +
+    '把 Gist ID 粘贴到这里：',
+    cfg.gistId || ''
+  );
+  if(id === null) return;
+  let gistId = id.trim();
+  // 允许直接粘完整 URL
+  const m = gistId.match(/gist\.github\.com\/[^/]+\/([a-f0-9]+)/i);
+  if(m) gistId = m[1];
+
+  const token = prompt(
+    '【第 2 步】粘贴 GitHub 访问令牌（Token）\n\n' +
+    '还没有？按下面做：\n' +
+    '1. 打开 github.com/settings/tokens/new\n' +
+    '2. Note 填：错题库同步\n' +
+    '3. 勾选 gist 权限（只勾这一个就行）\n' +
+    '4. 拉到底点 Generate token\n' +
+    '5. 复制那串 ghp_ 开头的字符（只显示一次）\n\n' +
+    '把 Token 粘贴到这里：',
+    cfg.token || ''
+  );
+  if(token === null) return;
+
+  setCloudCfg({gistId: gistId, token: token.trim()});
+  setSyncState('已配置，正在同步…', '');
+  manualSync();
 }
 
 /* 合并进错题库：同一题重复错则累加次数 */
@@ -514,6 +717,7 @@ document.querySelectorAll('.tab').forEach(t=>{
     wapp.classList.toggle('show', view==='wrong');
     document.getElementById('footQuiz').style.display = view==='quiz' ? '' : 'none';
     document.getElementById('footWrong').style.display = view==='wrong' ? '' : 'none';
+    document.getElementById('syncbar').style.display = view==='wrong' ? 'flex' : 'none';
     if(view==='wrong') renderWrong();
     window.scrollTo({top:0,behavior:'smooth'});
   });
@@ -545,6 +749,10 @@ document.getElementById('clearWrong').addEventListener('click',()=>{
     saveBook([]); renderWrong(); toast('错题库已清空');
   }
 });
+
+/* 云端同步按钮 */
+document.getElementById('btnSync').addEventListener('click', manualSync);
+document.getElementById('btnSetup').addEventListener('click', openCloudSetup);
 
 /* 导出错题库 */
 document.getElementById('export').addEventListener('click',()=>{
@@ -586,6 +794,77 @@ function toast(msg){
 /* 启动 */
 render();
 refreshBadge();
+
+// 云端状态初始化
+(function(){
+  const cfg = cloudCfg();
+  if(cfg && cfg.gistId && cfg.token){
+    setSyncState('已连接云端', 'ok');
+  }else{
+    setSyncState('未连接云端（错题仅存本地）', '');
+  }
+})();
+
+/* 注册 Service Worker（离线可访问；云同步请求不受影响） */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+
+/* ===== 添加到主屏幕 ===== */
+let deferredPrompt = null;
+const INSTALL_KEY = 'jl_install_dismissed';
+
+function isStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true;
+}
+
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault();
+  deferredPrompt = e;
+  showInstallBar();
+});
+
+function showInstallBar(){
+  if(isStandalone()) return;
+  if(localStorage.getItem(INSTALL_KEY) === '1') return;
+  const bar = document.getElementById('installbar');
+  if(bar) bar.style.display = 'flex';
+}
+
+const bInst = document.getElementById('btnInstall');
+if(bInst) bInst.addEventListener('click', async ()=>{
+  const bar = document.getElementById('installbar');
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    const r = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    if(bar) bar.style.display='none';
+    if(r && r.outcome === 'accepted') toast('已添加到桌面，去桌面找图标吧');
+  }else{
+    // iOS Safari 不支持自动安装，给出手动指引
+    toast('请点浏览器底部分享 → 添加到主屏幕');
+  }
+});
+
+const bInstClose = document.getElementById('btnInstallClose');
+if(bInstClose) bInstClose.addEventListener('click', ()=>{
+  const bar = document.getElementById('installbar');
+  if(bar) bar.style.display='none';
+  localStorage.setItem(INSTALL_KEY, '1');
+});
+
+// iOS/其他不支持 beforeinstallprompt 的浏览器：1.5 秒后温和提示（仅首次）
+setTimeout(()=>{
+  if(deferredPrompt) return;
+  if(isStandalone()) return;
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua);
+  const isAndroid = /Android/.test(ua);
+  if(isIOS || isAndroid) showInstallBar();
+}, 1500);
 </script>
 </body>
 </html>

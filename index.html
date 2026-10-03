@@ -2,8 +2,23 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>监理工程师备考 · 在线测验中心</title>
+
+<!-- ===== PWA：可"添加到主屏幕"，像 App 一样使用 ===== -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3370ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="监理刷题">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<style>
+:root{
+  --sat:env(safe-area-inset-top); --sab:env(safe-area-inset-bottom);
+}
 <style>
 :root{
   --bg:#f5f6f8; --card:#fff; --ink:#1f2329; --sub:#646a73; --line:#e4e6eb;
@@ -96,6 +111,24 @@ header .tags span{
 .note .dot{color:var(--brand);flex:0 0 auto;font-weight:700}
 
 footer{text-align:center;font-size:12.5px;color:#8f959e;margin-top:30px;line-height:1.9;padding:0 16px}
+
+/* 添加到主屏幕 提示条 */
+.installbar{
+  position:fixed;left:50%;bottom:calc(12px + env(safe-area-inset-bottom));
+  transform:translateX(-50%);width:calc(100% - 24px);max-width:540px;
+  background:#fff;border:1px solid var(--line);border-radius:14px;
+  box-shadow:0 8px 28px rgba(31,35,41,.16);padding:12px 14px;z-index:190;
+  display:flex;align-items:center;gap:11px;
+}
+.installbar img{width:40px;height:40px;border-radius:9px;flex:0 0 auto}
+.installbar .txt{flex:1;min-width:0;line-height:1.35}
+.installbar .txt b{display:block;font-size:14px}
+.installbar .txt span{font-size:12px;color:var(--sub)}
+.installbar button{
+  font:inherit;font-size:13px;padding:7px 14px;border-radius:8px;border:0;cursor:pointer;
+  background:var(--brand);color:#fff;font-weight:500;
+}
+.installbar button.ghost{background:#f2f3f5;color:var(--sub);padding:7px 10px;font-weight:400}
 </style>
 </head>
 <body>
@@ -136,6 +169,17 @@ footer{text-align:center;font-size:12.5px;color:#8f959e;margin-top:30px;line-hei
   监理工程师（土木建筑工程）备考 · 在线测验<br>
   题目来源：历年真题及教材考点改编
 </footer>
+
+<!-- 添加到主屏幕 提示条 -->
+<div class="installbar" id="installbar" style="display:none">
+  <img src="icons/icon-96.png" alt="">
+  <div class="txt">
+    <b>装到手机桌面</b>
+    <span>像 App 一样打开，做题更快</span>
+  </div>
+  <button id="btnInstall">添加</button>
+  <button class="ghost" id="btnInstallClose">×</button>
+</div>
 
 <script>
 /* ============ 周次清单（新增周次在这里加一行） ============ */
@@ -209,6 +253,50 @@ render();
 // 从测验页返回时刷新统计
 window.addEventListener('pageshow', render);
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) render(); });
+
+/* ===== 注册 Service Worker（离线可访问） ===== */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+
+/* ===== 添加到主屏幕 ===== */
+let deferredPrompt = null;
+const INSTALL_KEY = 'jl_install_dismissed';
+function isStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true;
+}
+function showInstallBar(){
+  if(isStandalone()) return;
+  if(localStorage.getItem(INSTALL_KEY) === '1') return;
+  const bar = document.getElementById('installbar');
+  if(bar) bar.style.display = 'flex';
+}
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault(); deferredPrompt = e; showInstallBar();
+});
+document.getElementById('btnInstall').addEventListener('click', async ()=>{
+  const bar = document.getElementById('installbar');
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    const r = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    if(bar) bar.style.display='none';
+  }else{
+    alert('请点浏览器菜单 → “添加到主屏幕”');
+  }
+});
+document.getElementById('btnInstallClose').addEventListener('click', ()=>{
+  const bar = document.getElementById('installbar');
+  if(bar) bar.style.display='none';
+  localStorage.setItem(INSTALL_KEY, '1');
+});
+setTimeout(()=>{
+  if(deferredPrompt || isStandalone()) return;
+  if(/iPad|iPhone|iPod|Android/.test(navigator.userAgent)) showInstallBar();
+}, 1500);
 </script>
 
 </body>
