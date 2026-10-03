@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>监理工程师备考 · 在线测验中心</title>
+<style>
+:root{
+  --bg:#f5f6f8; --card:#fff; --ink:#1f2329; --sub:#646a73; --line:#e4e6eb;
+  --brand:#3370ff; --brand-soft:#eaf1ff;
+  --ok:#3f9e4d; --ok-soft:#eaf7ec;
+  --no:#d83931; --no-soft:#fdeeed;
+  --warn:#b8770b; --warn-soft:#fdf4e3;
+  --radius:12px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.7 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  padding:0 0 60px;
+}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+
+header{
+  background:linear-gradient(135deg,#3370ff 0%,#1e4fd8 100%);
+  color:#fff;padding:38px 0 34px;
+}
+header .wrap{padding:0 16px}
+header h1{margin:0 0 8px;font-size:25px;font-weight:600;letter-spacing:.4px}
+header p{margin:0;font-size:14px;opacity:.9;line-height:1.8}
+header .tags{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+header .tags span{
+  font-size:12px;padding:3px 11px;border-radius:99px;
+  background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25);
+}
+
+/* 总览卡 */
+.overview{
+  background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px 20px;margin:-22px 0 26px;position:relative;z-index:2;
+  box-shadow:0 4px 16px rgba(31,35,41,.06);
+  display:flex;gap:22px;flex-wrap:wrap;align-items:center;
+}
+.ov-item{flex:1;min-width:92px;text-align:center}
+.ov-item .num{font-size:24px;font-weight:700;color:var(--brand);line-height:1.3;font-variant-numeric:tabular-nums}
+.ov-item .lbl{font-size:12.5px;color:var(--sub);margin-top:2px}
+.ov-item.ok .num{color:var(--ok)}
+.ov-item.warn .num{color:var(--warn)}
+
+.sec-title{
+  font-size:15px;font-weight:600;margin:26px 0 12px;
+  display:flex;align-items:center;gap:8px;
+}
+.sec-title::before{
+  content:'';width:3px;height:15px;background:var(--brand);border-radius:2px;
+}
+.sec-title .hint{font-size:12.5px;color:var(--sub);font-weight:400;margin-left:auto}
+
+/* 周次卡 */
+.week{
+  background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px 20px;margin-bottom:11px;transition:.18s;text-decoration:none;
+  color:inherit;display:block;position:relative;overflow:hidden;
+}
+.week:hover{border-color:var(--brand);box-shadow:0 3px 14px rgba(51,112,255,.1);transform:translateY(-1px)}
+.week.locked{opacity:.5;pointer-events:none;background:#fafbfc}
+.week .top{display:flex;align-items:baseline;gap:10px;margin-bottom:7px;flex-wrap:wrap}
+.week h3{margin:0;font-size:16px;font-weight:600}
+.week .date{font-size:13px;color:var(--sub)}
+.week .scope{font-size:13.5px;color:var(--sub);line-height:1.6}
+.week .bar{
+  display:flex;gap:8px;flex-wrap:wrap;margin-top:11px;align-items:center;
+}
+.chip{
+  font-size:12px;padding:3px 10px;border-radius:6px;font-weight:500;
+  background:#f2f3f5;color:var(--sub);
+}
+.chip.done{background:var(--ok-soft);color:var(--ok)}
+.chip.part{background:var(--warn-soft);color:var(--warn)}
+.chip.err{background:var(--no-soft);color:var(--no)}
+.chip.new{background:var(--brand-soft);color:var(--brand)}
+.week .go{
+  position:absolute;right:20px;top:50%;transform:translateY(-50%);
+  font-size:19px;color:#c9cdd4;transition:.18s;
+}
+.week:hover .go{color:var(--brand);transform:translateY(-50%) translateX(3px)}
+
+/* 说明区 */
+.note{
+  background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+  padding:16px 20px;margin-top:24px;font-size:13.5px;line-height:1.85;color:var(--sub);
+}
+.note b{color:var(--ink)}
+.note .row{display:flex;gap:9px;align-items:flex-start;margin-bottom:7px}
+.note .row:last-child{margin-bottom:0}
+.note .dot{color:var(--brand);flex:0 0 auto;font-weight:700}
+
+footer{text-align:center;font-size:12.5px;color:#8f959e;margin-top:30px;line-height:1.9;padding:0 16px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>监理工程师备考 · 在线测验</h1>
+    <p>土木建筑工程 ｜ 2027 年 5 月考试 ｜ 34 周备考计划</p>
+    <div class="tags">
+      <span>自动判分</span><span>错题自动收集</span><span>手机可用</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="overview">
+    <div class="ov-item"><div class="num" id="ovWeek">1</div><div class="lbl">已上线周次</div></div>
+    <div class="ov-item"><div class="num" id="ovQ">15</div><div class="lbl">题目总数</div></div>
+    <div class="ov-item ok"><div class="num" id="ovDone">0</div><div class="lbl">已完成</div></div>
+    <div class="ov-item warn"><div class="num" id="ovErr">0</div><div class="lbl">待攻克错题</div></div>
+  </div>
+
+  <div class="sec-title">测验列表<span class="hint">点击进入做题</span></div>
+
+  <div id="list"></div>
+
+  <div class="note">
+    <div class="row"><span class="dot">·</span><span><b>怎么用</b>：点进某一周 → 选答案 → 提交 → 自动判分，绿色=正确、红色=错误，每题附带解析。</span></div>
+    <div class="row"><span class="dot">·</span><span><b>错题库</b>：做错的题会自动收进该周的错题库，重复错会累计次数，优先显示错得多的题。</span></div>
+    <div class="row"><span class="dot">·</span><span><b>数据存在哪</b>：错题记录保存在你自己的浏览器里（不上传服务器）。换设备或清理浏览器数据会丢失，建议定期点"导出错题库"备份。</span></div>
+    <div class="row"><span class="dot">·</span><span><b>做题节奏</b>：工作日每天 3 题（30 分钟），周末做案例真题。</span></div>
+  </div>
+
+</div>
+
+<footer>
+  监理工程师（土木建筑工程）备考 · 在线测验<br>
+  题目来源：历年真题及教材考点改编
+</footer>
+
+<script>
+/* ============ 周次清单（新增周次在这里加一行） ============ */
+const WEEKS = [
+  { id:"w1", file:"week1.html", week:"第 1 周", date:"9/21–9/27",
+    scope:"概论法规 第 1 章 建设工程监理制度 ＋ 第 4 章 工程监理企业与监理工程师",
+    total:15, ready:true }
+  // 第 2 周以后：做好后把 ready 改成 true 即可自动上线
+];
+
+function loadBook(id){
+  try{ return JSON.parse(localStorage.getItem('jl_wrongbook_'+id)) || []; }catch(e){ return []; }
+}
+
+function render(){
+  const list = document.getElementById('list');
+  let html = '';
+  let totQ = 0, totDone = 0, totErr = 0, live = 0;
+
+  WEEKS.forEach(w=>{
+    totQ += w.total;
+    const book = loadBook(w.id);
+    const doneRaw = localStorage.getItem('jl_done_'+w.id);
+    let doneInfo = null;
+    try{ doneInfo = doneRaw ? JSON.parse(doneRaw) : null; }catch(e){}
+
+    // 状态标签
+    let chips = '';
+    if(!w.ready){
+      chips = '<span class="chip">筹备中</span>';
+    }else{
+      live++;
+      if(doneInfo){
+        const rate = Math.round(doneInfo.right / doneInfo.total * 100);
+        chips += `<span class="chip done">已做 ${doneInfo.right}/${doneInfo.total}（${rate}%）</span>`;
+        totDone++;
+      }else{
+        chips += '<span class="chip new">未开始</span>';
+      }
+      if(book.length){
+        const times = book.reduce((s,x)=>s+(x.times||1),0);
+        chips += `<span class="chip err">错题 ${book.length} 道｜累计错 ${times} 次</span>`;
+        totErr += book.length;
+      }else if(doneInfo){
+        chips += '<span class="chip done">全部掌握</span>';
+      }
+    }
+
+    const cls = w.ready ? 'week' : 'week locked';
+    const href = w.ready ? w.file : '#';
+    html += `<a class="${cls}" href="${href}">
+      <div class="top">
+        <h3>${w.week}</h3>
+        <span class="date">${w.date}</span>
+      </div>
+      <div class="scope">${w.scope}</div>
+      <div class="bar">${chips}</div>
+      <span class="go">›</span>
+    </a>`;
+  });
+
+  list.innerHTML = html;
+
+  document.getElementById('ovWeek').textContent = live;
+  document.getElementById('ovQ').textContent = totQ;
+  document.getElementById('ovDone').textContent = totDone;
+  document.getElementById('ovErr').textContent = totErr;
+}
+
+render();
+// 从测验页返回时刷新统计
+window.addEventListener('pageshow', render);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) render(); });
+</script>
+
+</body>
+</html>
